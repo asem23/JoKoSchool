@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: exam
+    runtime: python
+    plan: starter            # للتجربة المجانية: plan: free واحذف قسم disk وقسم DATA_DIR
+    buildCommand: echo "no build needed"
+    startCommand: python server.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: START_PASSWORD
+        sync: false          # تدخلها يدويًا في لوحة Render
+      - key: END_PASSWORD
+        sync: false
+      - key: DATA_DIR
+        value: /var/data
+    disk:
+      name: exam-data
+      mountPath: /var/data
+      sizeGB: 1

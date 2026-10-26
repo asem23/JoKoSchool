@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>امتحان التربية الإسلامية - الوحدة الأولى</title>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--tx:#1b2430;--mut:#5d6b7c;--pri:#1f4e78;--prit:#fff;--bd:#d5dce5;--ok:#1e7e4a;--okbg:#e2f5e9;--bad:#b3261e;--badbg:#fde8e6;--sel:#e3eefa;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#10151c;--card:#1a222d;--tx:#e8edf3;--mut:#9aa8b8;--pri:#6fa8dc;--prit:#10151c;--bd:#2e3947;--ok:#6fd49a;--okbg:#173424;--bad:#ff9d96;--badbg:#3a1d1b;--sel:#1f3042;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Arial,Tahoma,sans-serif;line-height:1.7;font-size:17px}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px;margin-bottom:14px}
+h1{font-size:22px;margin:0 0 6px}h2{font-size:18px;margin:0 0 10px}
+.mut{color:var(--mut);font-size:15px}
+input,select{width:100%;padding:12px;font-size:17px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);margin:8px 0;font-family:inherit}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--tx);padding:10px 16px}
+button.p{background:var(--pri);color:var(--prit);border-color:var(--pri);font-weight:bold}
+button:disabled{opacity:.4;cursor:default}
+.opt{display:block;width:100%;text-align:right;margin:8px 0;padding:12px 14px}
+.opt.s{background:var(--sel);border-color:var(--pri);font-weight:bold}
+.opt.ok{background:var(--okbg);border-color:var(--ok)}.opt.bad{background:var(--badbg);border-color:var(--bad)}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--pri)}
+.nav{display:flex;gap:8px;justify-content:space-between;margin-top:12px}
+.grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.grid button{width:38px;height:38px;padding:0;font-size:14px}.grid .d{background:var(--sel);border-color:var(--pri)}.grid .c{outline:2px solid var(--pri)}
+.end{margin-top:6px;text-align:center}.err{color:var(--bad);min-height:24px}
+.score{font-size:40px;font-weight:bold;color:var(--pri);text-align:center}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.on{display:flex}.modal .card{width:100%;max-width:380px;margin:0}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="modal" id="m"><div class="card">
+<h2 id="mt">إنهاء الامتحان (للمراقب فقط)</h2>
+<input type="password" id="pw" placeholder="كلمة مرور المراقب" autocomplete="off">
+<div class="err" id="err"></div>
+<div class="nav"><button id="cancel">إلغاء</button><button class="p" id="go">متابعة</button></div>
+</div></div>
+<script>
+var MAJORS=["أول ثانوي ميكانيك","أول ثانوي كهرباء سيارات","أول ثانوي كهرباء عامة","أول ثانوي تكنولوجيا"];
+var SECS=["أ","ب","ج","د","هـ","و","ز","ح"];
+var KEY="exam_u1_a_v4",S=null,MODE="end",$=function(i){return document.getElementById(i)},app=$("app");
+function load(){try{var r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function shuf(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function api(path,body){return fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){
+  if(!r.ok)return r.json().catch(function(){return{}}).then(function(j){throw new Error(j.error||"تعذر الاتصال بالسيرفر")});return r})}
+function opts(a){return a.map(function(x){return"<option>"+x+"</option>"}).join("")}
+function start(){
+  var n=$("nm").value.trim(),mj=$("mj").value,sc=$("sc").value;
+  if(n.length<3){$("e0").textContent="اكتب اسمك الكامل";return}
+  if(!mj||!sc){$("e0").textContent="اختر التخصص والشعبة";return}
+  $("e0").textContent="جارٍ التحقق...";
+  api("/api/start",{pw:$("sp").value}).then(function(r){return r.json()}).then(function(j){
+    var qs=shuf(j.questions).map(function(q){return{id:q.id,q:q.q,o:q.o,ord:shuf(q.o.map(function(_,i){return i}))}});
+    S={name:n,major:mj,sec:sc,qs:qs,ans:{},cur:0,res:null};save();render();
+  }).catch(function(e){$("e0").textContent=e.message})
+}
+function render(){
+  if(!S){app.innerHTML='<div class="card"><h1>امتحان التربية الإسلامية</h1><div class="mut">الوحدة الأولى (نموذج أ) - أسئلة مختارة عشوائيًا لكل طالب</div><input type="text" id="nm" placeholder="الاسم الكامل"><select id="mj"><option value="">اختر التخصص</option>'+opts(MAJORS)+'</select><select id="sc"><option value="">اختر الشعبة</option>'+opts(SECS)+'</select><input type="password" id="sp" placeholder="كلمة مرور بدء الامتحان (من المراقب)" autocomplete="off"><div class="err" id="e0"></div><button class="p" onclick="start()">ابدأ الامتحان</button><p class="mut">لا يمكن إنهاء الامتحان إلا بواسطة المراقب.</p></div>';return}
+  if(S.res){result();return}
+  var q=S.qs[S.cur],n=S.qs.length,done=Object.keys(S.ans).length;
+  var h='<div class="card"><div class="mut">'+esc(S.name)+' - '+esc(S.major)+' / '+esc(S.sec)+' - تمت الإجابة على '+done+' من '+n+'</div><div class="bar"><i style="width:'+(done/n*100)+'%"></i></div><h2>سؤال '+(S.cur+1)+' من '+n+'</h2><p>'+esc(q.q)+'</p>';
+  q.ord.forEach(function(k){h+='<button class="opt'+(S.ans[q.id]===k?" s":"")+'" onclick="pick('+q.id+','+k+')">'+esc(q.o[k])+'</button>'});
+  h+='<div class="nav"><button onclick="go(-1)"'+(S.cur==0?" disabled":"")+'>السابق</button><button class="p" onclick="go(1)"'+(S.cur==n-1?" disabled":"")+'>التالي</button></div></div><div class="card"><div class="mut">التنقل بين الأسئلة</div><div class="grid">';
+  S.qs.forEach(function(x,i){h+='<button class="'+(S.ans[x.id]!==undefined?"d ":"")+(i==S.cur?"c":"")+'" onclick="jump('+i+')">'+(i+1)+"</button>"});
+  app.innerHTML=h+'</div></div><div class="end"><button onclick="openM(0)">إنهاء الامتحان (للمراقب)</button></div>';window.scrollTo(0,0);
+}
+function pick(id,k){S.ans[id]=k;save();render()}
+function go(d){S.cur+=d;save();render()}
+function jump(i){S.cur=i;save();render()}
+function openM(x){MODE=x?"export":"end";$("mt").textContent=x?"تصدير النتائج (للمراقب فقط)":"إنهاء الامتحان (للمراقب فقط)";$("pw").value="";$("err").textContent="";$("m").classList.add("on");$("pw").focus()}
+$("cancel").onclick=function(){$("m").classList.remove("on")};
+$("pw").addEventListener("keydown",function(e){if(e.key==="Enter")$("go").click()});
+$("go").onclick=function(){
+  var pw=$("pw").value;$("err").textContent="جارٍ التحقق...";
+  if(MODE==="end"){
+    api("/api/finish",{pw:pw,name:S.name,major:S.major,sec:S.sec,ans:S.ans,ids:S.qs.map(function(q){return q.id})}).then(function(r){return r.json()}).then(function(j){S.res=j;save();$("m").classList.remove("on");render()}).catch(function(e){$("err").textContent=e.message});
+  }else{
+    api("/api/export",{pw:pw}).then(function(r){return r.blob()}).then(function(b){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="results.xlsx";document.body.appendChild(a);a.click();a.remove();$("m").classList.remove("on")}).catch(function(e){$("err").textContent=e.message});
+  }
+};
+function result(){
+  var r=S.res,h='<div class="card"><h1>انتهى الامتحان</h1><div class="mut">'+esc(S.name)+' - '+esc(S.major)+' / '+esc(S.sec)+'</div><div class="score">'+r.score+' / '+r.total+'</div><div class="mut" style="text-align:center">النسبة: '+r.pct+'%</div><div class="end"><button class="p" onclick="openM(1)">تصدير النتائج إلى Excel (للمراقب)</button></div></div><div class="card"><h2>مراجعة الإجابات</h2>';
+  S.qs.forEach(function(q,i){var c=r.correct[q.id],a=S.ans[q.id];h+="<p><b>"+(i+1)+".</b> "+esc(q.q)+"</p>";
+    q.o.forEach(function(o,k){var cl=k===c?" ok":(k===a?" bad":"");h+='<div class="opt'+cl+'">'+esc(o)+(k===c?" ✔":"")+(k===a&&k!==c?" ✘":"")+"</div>"});
+    if(a===undefined)h+='<div class="mut">لم تتم الإجابة على هذا السؤال</div>';h+='<hr style="border:0;border-top:1px solid var(--bd)">'});
+  app.innerHTML=h+"</div>";window.scrollTo(0,0);
+}
+load();render();
+</script>
+</body>
+</html>
